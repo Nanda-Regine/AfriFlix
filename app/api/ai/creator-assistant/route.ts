@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { anthropic, CLAUDE_MODEL, checkRateLimit } from '@/lib/claude'
+import { anthropic, CLAUDE_MODEL, checkRateLimit, cachedSystem, withCache } from '@/lib/claude'
 import { createClient } from '@/lib/supabase/server'
 
 const DISCOVERY_SYSTEM = `You are AfriFlix's friendly AI content guide. You have deep knowledge of African cinema, music, poetry, dance, writing, comedy, theatre, and storytelling from all 54 African nations and the diaspora.
@@ -52,18 +52,34 @@ export async function POST(req: Request) {
       }
     }
 
-    const systemPrompt = mode === 'creator'
-      ? `${CREATOR_SYSTEM}${creatorContext ? `\n\nCreator context: ${JSON.stringify(creatorContext)}` : ''}`
-      : DISCOVERY_SYSTEM
+    // Static system prompt is cached — dynamic creator context is prepended to first user message
+    const systemPrompt = cachedSystem(mode === 'creator' ? CREATOR_SYSTEM : DISCOVERY_SYSTEM)
+
+    // For creator mode, inject context into the conversation as a priming user turn
+    const builtMessages = messages.map((m: { role: string; content: string }) => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }))
+
+    // Cache up to the second-to-last message in multi-turn to save on long conversations
+    const cachedMessages = builtMessages.length > 2 ? withCache(builtMessages.slice(0, -1)).concat(builtMessages.slice(-1)) : builtMessages
+
+    const contextPrefix = mode === 'creator' && creatorContext
+      ? `[Context: ${JSON.stringify(creatorContext)}]\n\n`
+      : ''
+
+    if (contextPrefix && cachedMessages.length > 0 && cachedMessages[0].role === 'user') {
+      cachedMessages[0] = {
+        ...cachedMessages[0],
+        content: contextPrefix + (typeof cachedMessages[0].content === 'string' ? cachedMessages[0].content : ''),
+      }
+    }
 
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL,
       max_tokens: mode === 'creator' ? 800 : 250,
       system: systemPrompt,
-      messages: messages.map((m: { role: string; content: string }) => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-      })),
+      messages: cachedMessages,
     })
 
     const reply = response.content[0].type === 'text' ? response.content[0].text : ''

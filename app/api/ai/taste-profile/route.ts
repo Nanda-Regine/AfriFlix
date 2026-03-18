@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { anthropic, CLAUDE_MODEL, safeParseJSON } from '@/lib/claude'
+import { anthropic, CLAUDE_MODEL, safeParseJSON, cachedSystem } from '@/lib/claude'
 import { createClient } from '@/lib/supabase/server'
 import type { TasteProfileResult } from '@/types'
 
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL,
       max_tokens: 600,
-      system: `You are a creative AI curator with deep knowledge of African art, music, film, dance, writing, and cultural expression across all 54 African nations and the diaspora. You understand the full spectrum — from gqom to griot storytelling, Nollywood to Cape Town indie film, Lagos slam poetry to Nairobi afro-soul.`,
+      system: cachedSystem(`You are a creative AI curator with deep knowledge of African art, music, film, dance, writing, and cultural expression across all 54 African nations and the diaspora. You understand the full spectrum — from gqom to griot storytelling, Nollywood to Cape Town indie film, Lagos slam poetry to Nairobi afro-soul.`),
       messages: [{
         role: 'user',
         content: `Based on these onboarding quiz answers, generate a taste profile for a new AfriFlix user.

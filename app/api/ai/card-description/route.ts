@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { anthropic, CLAUDE_MODEL, checkRateLimit } from '@/lib/claude'
+import { anthropic, CLAUDE_MODEL, checkRateLimit, cachedSystem } from '@/lib/claude'
 
 export async function POST(req: Request) {
   try {
@@ -14,21 +14,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing title or category' }, { status: 400 })
     }
 
+    const CARD_DESC_SYSTEM = `You are AfriFlix's cinematic copywriter. Write one sentence — maximum 20 words — that makes someone desperate to watch, listen to, or read a piece of African creative content. Start with an action verb or strong emotion. No spoilers. Deeply African in tone. Return only the sentence, no quotes.`
+
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL,
       max_tokens: 80,
+      system: cachedSystem(CARD_DESC_SYSTEM),
       messages: [{
         role: 'user',
-        content: `Write one cinematic, evocative sentence that makes someone desperate to watch/listen/read this African ${category}: "${title}".
-
-Rules:
-- Maximum 20 words
-- Start with an action verb or strong emotion
-- No spoilers
-- Deeply African in tone and imagery
-- Make it irresistible
-
-Return only the sentence, no punctuation at start, no quotes.`,
+        content: `African ${category}: "${title}"`,
       }],
     })
 

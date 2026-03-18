@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { anthropic, CLAUDE_MODEL, safeParseJSON, checkRateLimit } from '@/lib/claude'
+import { anthropic, CLAUDE_MODEL, safeParseJSON, checkRateLimit, cachedSystem } from '@/lib/claude'
 import { createClient } from '@/lib/supabase/server'
 import type { MoodRecommendation, Work, TasteProfile } from '@/types'
 
@@ -66,12 +66,15 @@ export async function POST(req: Request) {
     const availableCandidates = works.filter(w => !recentHistory.includes(w.id))
     const toRank = availableCandidates.length > 0 ? availableCandidates : works
 
+    const DISCOVER_SYSTEM = `You are AfriFlix's discovery engine. You have deep knowledge of African creative content across all 54 nations. Your job is to rank candidate works by how well they match the user's current mood and taste profile. Return valid JSON only.`
+
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL,
       max_tokens: 400,
+      system: cachedSystem(DISCOVER_SYSTEM),
       messages: [{
         role: 'user',
-        content: `You are AfriFlix's discovery engine. Select the best works for this user right now.
+        content: `Select the best works for this user right now.
 
 User mood: "${mood}"
 ${tasteProfile ? `User taste: ${JSON.stringify({ categories: tasteProfile.preferred_categories, genres: tasteProfile.preferred_genres, languages: tasteProfile.preferred_languages })}` : 'No taste profile yet.'}

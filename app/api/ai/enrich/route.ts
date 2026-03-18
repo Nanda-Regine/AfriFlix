@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
-import { anthropic, CLAUDE_MODEL, safeParseJSON, checkRateLimit } from '@/lib/claude'
+import { anthropic, CLAUDE_MODEL, safeParseJSON, checkRateLimit, cachedSystem } from '@/lib/claude'
 import { createClient } from '@/lib/supabase/server'
 import type { AIEnrichment } from '@/types'
+
+const ENRICH_SYSTEM = `You are an African cultural curator and creative archivist. You understand the full spectrum of African creative expression — from gqom to griot storytelling, Nollywood to Cape Town indie film, Lagos slam poetry to Nairobi afro-soul. Your job is to generate discovery metadata that helps African audiences find this work.`
 
 export async function POST(req: Request) {
   try {
@@ -20,7 +22,7 @@ export async function POST(req: Request) {
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL,
       max_tokens: 500,
-      system: `You are an African cultural curator and creative archivist. You understand the full spectrum of African creative expression — from gqom to griot storytelling, Nollywood to Cape Town indie film, Lagos slam poetry to Nairobi afro-soul. Your job is to generate discovery metadata that helps African audiences find this work.`,
+      system: cachedSystem(ENRICH_SYSTEM),
       messages: [{
         role: 'user',
         content: `Enrich this AfriFlix content upload for discovery.
