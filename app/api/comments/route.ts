@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { isCsrfSafe } from '@/lib/csrf'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -23,21 +24,33 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  if (!isCsrfSafe(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
 
   const { work_id, content, parent_id, timestamp_ref } = await req.json()
-  if (!work_id || !content?.trim()) {
-    return NextResponse.json({ error: 'work_id and content required' }, { status: 400 })
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!work_id || !UUID_RE.test(work_id)) {
+    return NextResponse.json({ error: 'Valid work_id required' }, { status: 400 })
   }
-  if (content.trim().length > 1000) {
+  if (!content?.trim()) {
+    return NextResponse.json({ error: 'content required' }, { status: 400 })
+  }
+  if (parent_id && !UUID_RE.test(parent_id)) {
+    return NextResponse.json({ error: 'Invalid parent_id' }, { status: 400 })
+  }
+  // Strip HTML tags to prevent stored XSS
+  const sanitized = content.replace(/<[^>]*>/g, '').trim()
+  if (!sanitized) return NextResponse.json({ error: 'Comment cannot be empty' }, { status: 400 })
+  if (sanitized.length > 1000) {
     return NextResponse.json({ error: 'Comment too long (max 1000 chars)' }, { status: 400 })
   }
 
   const { data, error } = await supabase
     .from('comments')
-    .insert({ work_id, user_id: user.id, content: content.trim(), parent_id: parent_id ?? null, timestamp_ref: timestamp_ref ?? null })
+    .insert({ work_id, user_id: user.id, content: sanitized, parent_id: parent_id ?? null, timestamp_ref: timestamp_ref ?? null })
     .select(`
       id, content, timestamp_ref, heart_count, created_at, parent_id,
       user:creators!inner(display_name, username, avatar_url)
@@ -53,6 +66,8 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  if (!isCsrfSafe(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   const { searchParams } = new URL(req.url)
   const commentId = searchParams.get('id')
   if (!commentId) return NextResponse.json({ error: 'id required' }, { status: 400 })

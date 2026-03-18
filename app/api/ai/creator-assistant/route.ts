@@ -39,9 +39,9 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
       }
 
-      // Check creator pro
+      // Check creator pro — treat no profile as free (null bypass fix)
       const { data: creator } = await supabase.from('creators').select('plan').eq('user_id', user.id).single()
-      if (creator?.plan === 'free') {
+      if (!creator || creator.plan === 'free') {
         return NextResponse.json({ error: 'Creator Pro required' }, { status: 403 })
       }
     } else {

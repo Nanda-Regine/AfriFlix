@@ -29,7 +29,12 @@ function verifySignature(params: Record<string, string>, passphrase?: string): b
 
 export async function POST(req: Request) {
   try {
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? ''
+    // x-real-ip is set by Nginx/Vercel directly; x-forwarded-for can be spoofed by callers
+    const ip = (
+      req.headers.get('x-real-ip') ??
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+      ''
+    ).trim()
 
     if (!PAYFAST_IPS.has(ip) && process.env.PAYFAST_SANDBOX !== 'true') {
       console.warn('[payfast/webhook] Blocked IP:', ip)

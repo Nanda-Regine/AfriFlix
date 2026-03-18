@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { isCsrfSafe } from '@/lib/csrf'
 import crypto from 'crypto'
 
 function buildPayFastPayload(params: Record<string, string>): string {
@@ -43,25 +44,39 @@ function buildFlutterwavePayload(params: {
 
 export async function POST(req: Request) {
   try {
+    if (!isCsrfSafe(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
     const { creatorId, workId, amount, currency, message, provider } = await req.json()
 
-    if (!creatorId || !amount || amount < 10) {
-      return NextResponse.json({ error: 'Invalid tip parameters' }, { status: 400 })
+    // Validate UUIDs to prevent injection via Supabase query params
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!creatorId || !UUID_RE.test(creatorId)) {
+      return NextResponse.json({ error: 'Invalid creatorId' }, { status: 400 })
     }
-
+    if (workId !== undefined && workId !== null && !UUID_RE.test(workId)) {
+      return NextResponse.json({ error: 'Invalid workId' }, { status: 400 })
+    }
+    if (!amount || typeof amount !== 'number' || amount < 10 || amount > 100_000) {
+      return NextResponse.json({ error: 'Amount must be between 10 and 100,000' }, { status: 400 })
+    }
     if (!['payfast', 'flutterwave'].includes(provider)) {
       return NextResponse.json({ error: 'Invalid payment provider' }, { status: 400 })
+    }
+    const VALID_CURRENCIES = ['ZAR', 'USD', 'GBP', 'EUR', 'NGN', 'KES', 'GHS', 'XOF', 'EGP']
+    if (currency && !VALID_CURRENCIES.includes(currency)) {
+      return NextResponse.json({ error: 'Invalid currency' }, { status: 400 })
     }
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
 
-    // Fetch creator + user email
-    const [{ data: creator }, { data: profile }] = await Promise.all([
-      supabase.from('creators').select('display_name, tips_enabled').eq('id', creatorId).single(),
-      supabase.from('auth.users').select('email').eq('id', user.id).single(),
-    ])
+    // Fetch creator — user email comes from the auth session directly
+    const { data: creator } = await supabase
+      .from('creators')
+      .select('display_name, tips_enabled')
+      .eq('id', creatorId)
+      .single()
 
     if (!creator?.tips_enabled) {
       return NextResponse.json({ error: 'This creator has not enabled tips' }, { status: 403 })
@@ -105,7 +120,7 @@ export async function POST(req: Request) {
         cancel_url: cancelUrl,
         notify_url: notifyUrl,
         name_first: user.email?.split('@')[0] ?? 'Fan',
-        email_address: (profile as { email: string } | null)?.email ?? '',
+        email_address: user.email ?? '',
         m_payment_id: reference,
         amount: amount.toFixed(2),
         item_name: `Tip for ${creator.display_name}`,
@@ -134,7 +149,7 @@ export async function POST(req: Request) {
     const flwPayload = buildFlutterwavePayload({
       amount,
       currency: currency ?? 'ZAR',
-      email: (profile as { email: string } | null)?.email ?? user.id,
+      email: user.email ?? user.id,
       name: user.email?.split('@')[0] ?? 'Fan',
       reference,
       redirectUrl: returnUrl,

@@ -1,14 +1,20 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { isCsrfSafe } from '@/lib/csrf'
 
 // POST   /api/hearts  { work_id }  → toggle heart, returns { hearted: bool, count: number }
 export async function POST(req: Request) {
+  if (!isCsrfSafe(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
 
   const { work_id } = await req.json()
-  if (!work_id) return NextResponse.json({ error: 'work_id required' }, { status: 400 })
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!work_id || !UUID_RE.test(work_id)) {
+    return NextResponse.json({ error: 'Valid work_id required' }, { status: 400 })
+  }
 
   // Check if already hearted
   const { data: existing } = await supabase
