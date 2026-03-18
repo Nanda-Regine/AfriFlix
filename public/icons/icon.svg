@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#0A0A0A"/>
+  <!-- Kente-inspired geometric border -->
+  <rect x="20" y="20" width="472" height="472" rx="60" fill="none" stroke="#C9A84C" stroke-width="6"/>
+  <rect x="40" y="40" width="432" height="432" rx="48" fill="none" stroke="#8A6E2E" stroke-width="2"/>
+  <!-- A letterform -->
+  <text x="256" y="300" font-family="serif" font-weight="800" font-size="220" fill="#C9A84C" text-anchor="middle">A</text>
+  <!-- Wordmark below -->
+  <text x="256" y="430" font-family="sans-serif" font-weight="700" font-size="52" fill="#F2ECD9" text-anchor="middle" letter-spacing="8">FRIFLIX</text>
+  <!-- Terracotta dot on A -->
+  <circle cx="256" cy="180" r="12" fill="#C4622D"/>
+</svg>

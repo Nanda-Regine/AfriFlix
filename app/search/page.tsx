@@ -8,21 +8,48 @@ async function search(q: string): Promise<{ works: Work[]; creators: Creator[] }
   if (!q.trim()) return { works: [], creators: [] }
   const supabase = await createClient()
 
+  // Use Postgres full-text search (search_vector column from migration 005)
+  // Falls back to ilike for short queries or when FTS returns no results
+  const ftsQuery = q.trim().split(/\s+/).filter(Boolean).map(w => `${w}:*`).join(' & ')
+
   const [worksResult, creatorsResult] = await Promise.all([
     supabase
       .from('works')
       .select('*, creator:creators(display_name, username, avatar_url)')
       .eq('status', 'published')
-      .or(`title.ilike.%${q}%,description.ilike.%${q}%,ai_summary.ilike.%${q}%`)
+      .textSearch('search_vector', ftsQuery, { type: 'websearch', config: 'english' })
       .order('view_count', { ascending: false })
       .limit(18),
     supabase
       .from('creators')
       .select('*')
-      .or(`display_name.ilike.%${q}%,username.ilike.%${q}%,bio.ilike.%${q}%`)
+      .textSearch('search_vector', ftsQuery, { type: 'websearch', config: 'english' })
       .order('follower_count', { ascending: false })
       .limit(6),
   ])
+
+  // Fallback to ilike if FTS returns nothing (e.g., before migration 005 runs)
+  if ((worksResult.data?.length ?? 0) === 0 && (creatorsResult.data?.length ?? 0) === 0) {
+    const [wFallback, cFallback] = await Promise.all([
+      supabase
+        .from('works')
+        .select('*, creator:creators(display_name, username, avatar_url)')
+        .eq('status', 'published')
+        .or(`title.ilike.%${q}%,description.ilike.%${q}%,ai_summary.ilike.%${q}%`)
+        .order('view_count', { ascending: false })
+        .limit(18),
+      supabase
+        .from('creators')
+        .select('*')
+        .or(`display_name.ilike.%${q}%,username.ilike.%${q}%,bio.ilike.%${q}%`)
+        .order('follower_count', { ascending: false })
+        .limit(6),
+    ])
+    return {
+      works: (wFallback.data as Work[]) ?? [],
+      creators: (cFallback.data as Creator[]) ?? [],
+    }
+  }
 
   return {
     works: (worksResult.data as Work[]) ?? [],
@@ -33,9 +60,10 @@ async function search(q: string): Promise<{ works: Work[]; creators: Creator[] }
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: { q?: string }
+  searchParams: Promise<{ q?: string }>
 }) {
-  const query = searchParams.q ?? ''
+  const { q } = await searchParams
+  const query = q ?? ''
   const { works, creators } = await search(query)
   const total = works.length + creators.length
 

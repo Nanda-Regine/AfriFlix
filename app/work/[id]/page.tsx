@@ -10,6 +10,8 @@ import { WorkCard } from '@/components/cards/work-card'
 import { HeartButton } from '@/components/community/heart-button'
 import { FollowButton } from '@/components/community/follow-button'
 import { Comments } from '@/components/community/comments'
+import { ViewTracker } from '@/components/works/view-tracker'
+import { SaveButton } from '@/components/works/save-button'
 import { formatCount, timeAgo, formatDuration } from '@/lib/utils'
 import { CATEGORY_META } from '@/types'
 import type { Work } from '@/types'
@@ -100,6 +102,7 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <ViewTracker workId={work.id} />
     <div className="min-h-screen pt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-10">
@@ -146,6 +149,7 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
               <div className="flex items-center gap-5 text-sm text-ivory-dim font-mono">
                 <span>{formatCount(work.view_count)} views</span>
                 <HeartButton workId={work.id} initialCount={work.heart_count} />
+                <SaveButton workId={work.id} />
                 {work.video_duration_seconds && <span>{formatDuration(work.video_duration_seconds)}</span>}
                 <span>{timeAgo(work.published_at)}</span>
               </div>

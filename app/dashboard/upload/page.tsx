@@ -7,9 +7,17 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { UploadDropzone } from '@/components/works/upload-dropzone'
 import { useAuthStore } from '@/store/auth'
 import { cn } from '@/lib/utils'
 import type { ContentCategory, AIEnrichment } from '@/types'
+
+interface UploadResult {
+  videoUrl?: string
+  audioUrl?: string
+  imageUrl?: string
+  streamUid?: string
+}
 
 const STEPS = ['Category', 'Upload', 'Metadata', 'AI Enrichment', 'Publish']
 
@@ -41,6 +49,7 @@ export default function UploadPage() {
   const [languages, setLanguages] = useState('')
   const [country, setCountry] = useState('')
   const [ageRating, setAgeRating] = useState('G')
+  const [uploadResult, setUploadResult] = useState<UploadResult | null>(null)
   const [enrichment, setEnrichment] = useState<AIEnrichment | null>(null)
   const [enrichmentLoading, setEnrichmentLoading] = useState(false)
   const [publishing, setPublishing] = useState(false)
@@ -84,6 +93,10 @@ export default function UploadPage() {
       ai_summary: enrichment?.ai_summary ?? null,
       mood_tags: enrichment?.mood_tags ?? [],
       theme_tags: enrichment?.theme_tags ?? [],
+      // Cloudflare media URLs from upload step
+      video_url: uploadResult?.videoUrl ?? null,
+      audio_url: uploadResult?.audioUrl ?? null,
+      cover_art_url: uploadResult?.imageUrl ?? null,
       status: 'published',
     }).select().single()
 
@@ -159,25 +172,16 @@ export default function UploadPage() {
             {(() => { const c = CATEGORIES.find(x => x.value === category); return c && c.maxMB >= 1024 ? `${c.maxMB / 1024}GB` : `${CATEGORIES.find(x => x.value === category)?.maxMB}MB` })()}
           </p>
 
-          <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-white/20 rounded-xl cursor-pointer hover:border-gold/40 transition-colors bg-black-card">
-            <span className="text-4xl mb-3">📁</span>
-            <p className="font-syne text-ivory-mid">Click to select file</p>
-            <p className="text-xs text-ivory-dim mt-1">or drag and drop</p>
-            <input
-              type="file"
-              accept={CATEGORIES.find(c => c.value === category)?.accept}
-              className="hidden"
-              onChange={() => { /* TODO: Upload to Cloudflare Stream/R2 */ }}
-            />
-          </label>
-
-          <p className="text-xs text-ivory-dim mt-4 text-center">
-            Files are uploaded to Cloudflare — optimised for African bandwidth
-          </p>
+          <UploadDropzone
+            category={category}
+            onUploadComplete={(result) => {
+              setUploadResult(result)
+            }}
+          />
 
           <div className="flex gap-3 mt-6">
             <Button variant="ghost" onClick={() => setStep(0)}>Back</Button>
-            <Button variant="gold" onClick={() => setStep(2)}>Continue</Button>
+            <Button variant="gold" disabled={!uploadResult} onClick={() => setStep(2)}>Continue</Button>
           </div>
         </div>
       )}
