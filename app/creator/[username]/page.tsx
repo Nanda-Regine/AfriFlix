@@ -32,23 +32,54 @@ async function getCreatorWorks(creatorId: string): Promise<Record<ContentCategor
   }, {} as Record<ContentCategory, Work[]>)
 }
 
-export async function generateMetadata({ params }: { params: { username: string } }): Promise<Metadata> {
-  const creator = await getCreator(params.username)
+export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
+  const { username } = await params
+  const creator = await getCreator(username)
   if (!creator) return {}
+  const desc = creator.bio ?? `${creator.categories.map(c => c.replace('_', ' ')).join(', ')} creator from ${creator.country} on AfriFlix`
   return {
     title: `${creator.display_name} (@${creator.username})`,
-    description: creator.bio ?? `African creator on AfriFlix — ${creator.categories.join(', ')}`,
+    description: desc,
+    keywords: [...creator.categories, creator.country, ...creator.cultural_roots, 'African creator', 'AfriFlix'],
+    openGraph: {
+      type: 'profile',
+      title: `${creator.display_name} on AfriFlix`,
+      description: desc,
+      images: creator.avatar_url ? [{ url: creator.avatar_url, width: 400, height: 400, alt: creator.display_name }] : [],
+      siteName: 'AfriFlix',
+    },
+    twitter: {
+      card: 'summary',
+      title: `${creator.display_name} (@${creator.username})`,
+      description: desc,
+      images: creator.avatar_url ? [creator.avatar_url] : [],
+    },
   }
 }
 
-export default async function CreatorPage({ params }: { params: { username: string } }) {
-  const creator = await getCreator(params.username)
+export default async function CreatorPage({ params }: { params: Promise<{ username: string }> }) {
+  const { username } = await params
+  const creator = await getCreator(username)
   if (!creator) notFound()
 
   const worksByCategory = await getCreatorWorks(creator.id)
   const categories = Object.keys(worksByCategory) as ContentCategory[]
 
+  const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://afriflix.co.za'
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: creator.display_name,
+    url: `${BASE}/creator/${creator.username}`,
+    image: creator.avatar_url ?? undefined,
+    description: creator.bio ?? undefined,
+    nationality: creator.country,
+    sameAs: [],
+  }
+
   return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
     <div className="min-h-screen">
       {/* Banner */}
       <div className="relative h-48 sm:h-64 bg-gradient-to-br from-gold/20 to-terra/20 kente-bg">
@@ -157,5 +188,6 @@ export default async function CreatorPage({ params }: { params: { username: stri
         )}
       </div>
     </div>
+    </>
   )
 }

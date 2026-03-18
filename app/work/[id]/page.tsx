@@ -38,22 +38,35 @@ async function getRelated(work: Work): Promise<Work[]> {
   return (data as Work[]) ?? []
 }
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const work = await getWork(params.id)
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const work = await getWork(id)
   if (!work) return {}
+  const image = work.video_thumbnail || work.cover_art_url
+  const description = work.ai_summary ?? work.description ?? `${work.category} by ${work.creator?.display_name} on AfriFlix`
   return {
     title: work.title,
-    description: work.ai_summary ?? work.description ?? undefined,
+    description,
+    keywords: [work.category, ...(work.genres ?? []), ...(work.theme_tags ?? []), 'African', work.country_of_origin ?? ''].filter(Boolean),
     openGraph: {
+      type: 'video.other',
       title: work.title,
-      description: work.ai_summary ?? work.description ?? undefined,
-      images: work.video_thumbnail || work.cover_art_url ? [{ url: (work.video_thumbnail || work.cover_art_url)! }] : [],
+      description,
+      images: image ? [{ url: image, width: 1280, height: 720, alt: work.title }] : [],
+      siteName: 'AfriFlix',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: work.title,
+      description,
+      images: image ? [image] : [],
     },
   }
 }
 
-export default async function WorkPage({ params }: { params: { id: string } }) {
-  const work = await getWork(params.id)
+export default async function WorkPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const work = await getWork(id)
   if (!work) notFound()
 
   const related = await getRelated(work)
@@ -62,7 +75,31 @@ export default async function WorkPage({ params }: { params: { id: string } }) {
   const isAudio = work.category === 'music'
   const isText = work.category === 'writing'
 
+  const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://afriflix.co.za'
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': isVideo ? 'VideoObject' : isAudio ? 'MusicRecording' : 'CreativeWork',
+    name: work.title,
+    description: work.ai_summary ?? work.description ?? undefined,
+    thumbnailUrl: work.video_thumbnail ?? work.cover_art_url ?? undefined,
+    uploadDate: work.published_at,
+    creator: work.creator ? {
+      '@type': 'Person',
+      name: work.creator.display_name,
+      url: `${BASE}/creator/${work.creator.username}`,
+    } : undefined,
+    inLanguage: work.languages?.[0] ?? 'en',
+    url: `${BASE}/work/${work.id}`,
+    countryOfOrigin: work.country_of_origin ?? undefined,
+    genre: work.genres?.[0] ?? undefined,
+  }
+
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
     <div className="min-h-screen pt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-10">
@@ -206,5 +243,6 @@ export default async function WorkPage({ params }: { params: { id: string } }) {
         )}
       </div>
     </div>
+    </>
   )
 }
