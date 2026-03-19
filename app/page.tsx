@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { unstable_cache } from 'next/cache'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { BrowseRow } from '@/components/cards/browse-row'
@@ -7,6 +8,9 @@ import { MoodRecommender } from '@/components/ai/mood-recommender'
 import { Button } from '@/components/ui/button'
 import { WorkCardSkeleton, CreatorCardSkeleton } from '@/components/ui/shimmer'
 import type { Work, Creator } from '@/types'
+
+// Revalidate non-personalised public content every 5 minutes
+export const revalidate = 300
 
 type TasteProfile = {
   preferred_categories: string[]
@@ -35,7 +39,7 @@ const SEED_WORKS: Partial<Work>[] = [
   { id: '17', title: 'She Spoke Mountains', category: 'poetry', view_count: 6100, heart_count: 730 },
 ]
 
-async function getTrendingWorks(): Promise<Work[]> {
+const getTrendingWorks = unstable_cache(async (): Promise<Work[]> => {
   try {
     const supabase = await createClient()
     const { data } = await supabase
@@ -49,9 +53,9 @@ async function getTrendingWorks(): Promise<Work[]> {
   } catch {
     return SEED_WORKS.slice(0, 6) as Work[]
   }
-}
+}, ['trending-works'], { revalidate: 300 })
 
-async function getAwardWinners(): Promise<Work[]> {
+const getAwardWinners = unstable_cache(async (): Promise<Work[]> => {
   try {
     const supabase = await createClient()
     const { data } = await supabase
@@ -66,9 +70,9 @@ async function getAwardWinners(): Promise<Work[]> {
   } catch {
     return SEED_WORKS.slice(6, 12) as Work[]
   }
-}
+}, ['award-winners'], { revalidate: 300 })
 
-async function getPoetryWorks(): Promise<Work[]> {
+const getPoetryWorks = unstable_cache(async (): Promise<Work[]> => {
   try {
     const supabase = await createClient()
     const { data } = await supabase
@@ -82,9 +86,9 @@ async function getPoetryWorks(): Promise<Work[]> {
   } catch {
     return SEED_WORKS.slice(12) as Work[]
   }
-}
+}, ['poetry-works'], { revalidate: 300 })
 
-async function getFeaturedCreators(): Promise<Creator[]> {
+const getFeaturedCreators = unstable_cache(async (): Promise<Creator[]> => {
   try {
     const supabase = await createClient()
     const { data } = await supabase
@@ -97,7 +101,7 @@ async function getFeaturedCreators(): Promise<Creator[]> {
   } catch {
     return []
   }
-}
+}, ['featured-creators'], { revalidate: 300 })
 
 async function getPersonalisedRows(userId: string): Promise<{ label: string; works: Work[] }[]> {
   const supabase = await createClient()
