@@ -42,16 +42,17 @@ async function getRisingCreators(): Promise<Creator[]> {
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: SearchParams
+  searchParams: Promise<SearchParams>
 }) {
+  const filters = await searchParams
   const [works, risingCreators] = await Promise.all([
-    getWorks(searchParams),
+    getWorks(filters),
     getRisingCreators(),
   ])
 
-  const activeCategory = searchParams.category as ContentCategory | undefined
-  const activeMood = searchParams.mood
-  const hasFilters = activeCategory || activeMood || searchParams.country
+  const activeCategory = filters.category as ContentCategory | undefined
+  const activeMood = filters.mood
+  const hasFilters = activeCategory || activeMood || filters.country
 
   return (
     <div className="min-h-screen pt-24 pb-16 px-4 sm:px-6">
@@ -82,7 +83,7 @@ export default async function ExplorePage({
         {/* Mood filters */}
         <div className="flex flex-wrap gap-2 mb-8">
           {Object.entries(MOOD_CONFIG).map(([mood, cfg]) => (
-            <Link key={mood} href={`/explore?${activeCategory ? `category=${activeCategory}&` : ''}mood=${mood}`}>
+            <Link key={mood} href={`/explore?${activeCategory ? `category=${activeCategory}&` : ''}mood=${mood}`} prefetch={false}>
               <button
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-pill text-xs font-syne border transition-all"
                 style={activeMood === mood ? {
