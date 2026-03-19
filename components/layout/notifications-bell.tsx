@@ -12,19 +12,29 @@ interface Notification {
   title: string
   body: string | null
   link: string | null
+  link_url: string | null
   actor_avatar_url: string | null
   is_read: boolean
   created_at: string
+  metadata?: {
+    work_id?: string
+    creator_id?: string
+    thumbnail?: string
+    category?: string
+  } | null
 }
 
 const TYPE_ICON: Record<string, string> = {
   tip_received: '💰',
   new_follower: '👤',
+  new_work: '🎬',
   collab_application: '🤝',
   collab_accepted: '🎉',
   comment_on_work: '💬',
   comment_reply: '↩️',
   heart_milestone: '❤️',
+  badge_awarded: '🏆',
+  payout_processed: '💸',
 }
 
 export function NotificationsBell() {
@@ -155,8 +165,9 @@ function NotificationItem({ notification: n, onClose }: { notification: Notifica
     </div>
   )
 
-  if (n.link) {
-    return <Link href={n.link} onClick={onClose}>{inner}</Link>
+  const href = n.link ?? n.link_url ?? (n.metadata?.work_id ? `/work/${n.metadata.work_id}` : null)
+  if (href) {
+    return <Link href={href} onClick={onClose}>{inner}</Link>
   }
   return inner
 }
