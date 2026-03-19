@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { BrowseRow } from '@/components/cards/browse-row'
-import { slugToCategory, categoryToSlug } from '@/lib/utils'
+import { slugToCategory } from '@/lib/utils'
 import { CATEGORY_META } from '@/types'
 import type { Work, ContentCategory } from '@/types'
 
@@ -36,8 +38,9 @@ async function getCategoryWorks(category: ContentCategory): Promise<{
   }
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const category = slugToCategory(params.slug)
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const category = slugToCategory(slug)
   const meta = CATEGORY_META[category]
   if (!meta) return {}
   return {
@@ -46,8 +49,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 }
 
-export default async function CategoryPage({ params }: { params: { slug: string } }) {
-  const category = slugToCategory(params.slug)
+export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const category = slugToCategory(slug)
   const meta = CATEGORY_META[category]
   if (!meta) notFound()
 
@@ -85,6 +89,44 @@ export default async function CategoryPage({ params }: { params: { slug: string 
 
         {recent.length > 0 && (
           <BrowseRow title="Recently Added" works={recent} />
+        )}
+
+        {/* Visual Art masonry gallery */}
+        {category === 'visual_art' && recent.length > 0 && (
+          <div className="px-4 sm:px-6 mb-12">
+            <div className="max-w-7xl mx-auto">
+              <p className="text-xs font-mono text-ivory-dim uppercase tracking-wider mb-4">Gallery</p>
+              <div className="columns-2 sm:columns-3 lg:columns-4 gap-3 space-y-3">
+                {recent.map(work => (
+                  <Link
+                    key={work.id}
+                    href={`/work/${work.id}`}
+                    className="block break-inside-avoid rounded-xl overflow-hidden border border-white/5 hover:border-gold/30 transition-all group relative"
+                  >
+                    {(work.cover_art_url || work.video_thumbnail) ? (
+                      <Image
+                        src={(work.cover_art_url || work.video_thumbnail)!}
+                        alt={work.title}
+                        width={400}
+                        height={600}
+                        className="w-full object-cover"
+                      />
+                    ) : (
+                      <div className="aspect-square bg-gradient-to-br from-gold/10 to-terra/10 flex items-center justify-center">
+                        <span className="text-3xl font-syne font-bold text-gold/30">{work.title[0]}</span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                      <p className="font-syne font-semibold text-sm text-ivory line-clamp-1">{work.title}</p>
+                      {work.creator && (
+                        <p className="text-xs text-ivory-dim">{work.creator.display_name}</p>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
 
         {featured.length === 0 && trending.length === 0 && recent.length === 0 && (
