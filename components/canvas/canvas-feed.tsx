@@ -8,7 +8,8 @@ import { useAuthStore } from '@/store/auth'
 import { formatCount } from '@/lib/utils'
 import type { Work } from '@/types'
 
-interface CanvasWork extends Work {
+// Subset of Work with a partial creator for canvas display (not the full Creator object)
+interface CanvasWork extends Omit<Work, 'creator'> {
   creator: {
     id: string
     display_name: string

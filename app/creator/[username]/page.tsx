@@ -208,9 +208,9 @@ export default async function CreatorPage({ params }: { params: Promise<{ userna
         )}
 
         {/* Badges */}
-        {creator.badges?.length > 0 && (
+        {(creator.badges?.length ?? 0) > 0 && (
           <div className="mb-8">
-            <BadgeRack badges={creator.badges} />
+            <BadgeRack badges={creator.badges ?? []} />
           </div>
         )}
 

@@ -50,7 +50,8 @@ export default async function CanvasPage() {
         <span className="font-syne font-bold text-sm text-white/40 tracking-widest uppercase">Canvas</span>
       </div>
 
-      <CanvasFeed initialWorks={works as Parameters<typeof CanvasFeed>[0]['initialWorks']} />
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <CanvasFeed initialWorks={works as any} />
     </div>
   )
 }

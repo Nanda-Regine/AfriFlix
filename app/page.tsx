@@ -114,7 +114,8 @@ async function getPersonalisedRows(userId: string): Promise<{ label: string; wor
     .limit(6)
 
   if (history && history.length > 0) {
-    rows.push({ label: 'Continue Watching', works: history.map((h: { works: Work }) => h.works).filter(Boolean) })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rows.push({ label: 'Continue Watching', works: history.map((h: any) => h.works as Work).filter(Boolean) })
   }
 
   // From creators you follow

@@ -178,7 +178,14 @@ export default async function PayoutsPage() {
                 Update payout details
               </summary>
               <div className="mt-4">
-                <BankAccountForm existing={bankAccount} />
+                <BankAccountForm existing={{
+                  ...bankAccount,
+                  bank_name: bankAccount.bank_name ?? undefined,
+                  account_holder_name: bankAccount.account_holder_name ?? undefined,
+                  bank_account_type: bankAccount.bank_account_type ?? undefined,
+                  mobile_provider: bankAccount.mobile_provider ?? undefined,
+                  mobile_number: bankAccount.mobile_number ?? undefined,
+                }} />
               </div>
             </details>
           </div>

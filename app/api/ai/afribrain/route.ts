@@ -63,9 +63,10 @@ export async function POST(req: Request) {
   const creators = creatorsRes.data ?? []
 
   const platformContext = works.length > 0
-    ? `\n\nCurrent platform snapshot:\n\nTop works:\n${works.slice(0, 20).map(w =>
-        `• "${w.title}" [${w.category}] by ${(w.creator as { display_name: string })?.display_name ?? 'Unknown'} — moods: ${w.mood_tags?.join(', ') || 'none'} | genres: ${w.genres?.join(', ') || 'none'} | ${w.view_count} views`
-      ).join('\n')}\n\nFeatured creators:\n${creators.map(c =>
+    ? `\n\nCurrent platform snapshot:\n\nTop works:\n${works.slice(0, 20).map(w => {
+        const cr = Array.isArray(w.creator) ? w.creator[0] : (w.creator as { display_name?: string } | null)
+        return `• "${w.title}" [${w.category}] by ${cr?.display_name ?? 'Unknown'} — moods: ${w.mood_tags?.join(', ') || 'none'} | genres: ${w.genres?.join(', ') || 'none'} | ${w.view_count} views`
+      }).join('\n')}\n\nFeatured creators:\n${creators.map(c =>
         `• ${c.display_name} (@${c.username}) — ${c.country} | ${c.categories?.join(', ')} | ${c.follower_count} followers`
       ).join('\n')}`
     : ''
