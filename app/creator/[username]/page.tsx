@@ -7,6 +7,7 @@ import { WorkCard } from '@/components/cards/work-card'
 import { Badge } from '@/components/ui/badge'
 import { FollowButton } from '@/components/community/follow-button'
 import { CreativeDnaCard } from '@/components/ai/creative-dna-card'
+import { CreatorNotes } from '@/components/community/creator-notes'
 import { TipButton } from '@/components/payments/tip-button'
 import { formatCount } from '@/lib/utils'
 import { CATEGORY_META } from '@/types'
@@ -223,6 +224,14 @@ export default async function CreatorPage({ params }: { params: Promise<{ userna
             worksCount={creator.works_count}
           />
         </div>
+
+        {/* Creator Notes */}
+        <CreatorNotes
+          creatorId={creator.id}
+          creatorName={creator.display_name}
+          creatorAvatar={creator.avatar_url}
+          isOwner={isOwner}
+        />
 
         {/* Works by category */}
         {categories.length === 0 ? (

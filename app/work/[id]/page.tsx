@@ -12,6 +12,7 @@ import { FollowButton } from '@/components/community/follow-button'
 import { Comments } from '@/components/community/comments'
 import { ViewTracker } from '@/components/works/view-tracker'
 import { SaveButton } from '@/components/works/save-button'
+import { TipButton } from '@/components/payments/tip-button'
 import { formatCount, timeAgo, formatDuration } from '@/lib/utils'
 import { CATEGORY_META } from '@/types'
 import type { Work } from '@/types'
@@ -201,9 +202,9 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
                   <FollowButton creatorId={work.creator.id} className="flex-1" />
                 </div>
                 {work.creator.tips_enabled && (
-                  <button className="w-full mt-2 py-2 bg-gold/20 border border-gold/30 rounded-lg text-sm text-gold hover:bg-gold/30 transition-colors font-syne">
-                    Tip Creator
-                  </button>
+                  <div className="mt-2">
+                    <TipButton creator={work.creator} workId={work.id} />
+                  </div>
                 )}
               </div>
             )}

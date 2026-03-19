@@ -4,6 +4,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/badge'
+import { FollowButton } from '@/components/community/follow-button'
+import { TipButton } from '@/components/payments/tip-button'
 import { formatCount, formatDuration } from '@/lib/utils'
 import { CATEGORY_META } from '@/types'
 import type { Series, Work } from '@/types'
@@ -30,8 +32,9 @@ async function getEpisodes(seriesId: string): Promise<Work[]> {
   return (data as Work[]) ?? []
 }
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const series = await getSeries(params.id)
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const series = await getSeries(id)
   if (!series) return {}
   return {
     title: series.title,
@@ -44,10 +47,11 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   }
 }
 
-export default async function SeriesPage({ params }: { params: { id: string } }) {
+export default async function SeriesPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const [series, episodes] = await Promise.all([
-    getSeries(params.id),
-    getEpisodes(params.id),
+    getSeries(id),
+    getEpisodes(id),
   ])
 
   if (!series) notFound()
@@ -164,17 +168,18 @@ export default async function SeriesPage({ params }: { params: { id: string } })
                   </p>
                 )}
 
-                <div className="flex gap-3 mt-4">
-                  <Link
-                    href={`/creator/${series.creator.username}`}
-                    className="flex-1 text-center py-2 border border-white/10 rounded-lg text-sm text-ivory-mid hover:text-ivory hover:border-gold/30 transition-colors font-syne"
-                  >
-                    View Profile
-                  </Link>
+                <div className="flex flex-col gap-2 mt-4">
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/creator/${series.creator.username}`}
+                      className="flex-1 text-center py-2 border border-white/10 rounded-lg text-sm text-ivory-mid hover:text-ivory hover:border-gold/30 transition-colors font-syne"
+                    >
+                      View Profile
+                    </Link>
+                    <FollowButton creatorId={series.creator.id} className="flex-1" />
+                  </div>
                   {series.creator.tips_enabled && (
-                    <button className="flex-1 py-2 bg-gold/20 border border-gold/30 rounded-lg text-sm text-gold hover:bg-gold/30 transition-colors font-syne">
-                      Tip Creator
-                    </button>
+                    <TipButton creator={series.creator} />
                   )}
                 </div>
               </div>
