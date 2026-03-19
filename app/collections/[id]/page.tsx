@@ -12,14 +12,15 @@ interface Props {
 async function getCollection(id: string) {
   const supabase = await createClient()
 
-  const { data: collection } = await supabase
+  const { data: collectionRaw } = await supabase
     .from('collections')
-    .select('*, owner:auth.users(email)')
+    .select('*')
     .eq('id', id)
     .eq('is_public', true)
     .single()
 
-  if (!collection) return null
+  if (!collectionRaw) return null
+  const collection = collectionRaw as unknown as Collection
 
   const { data: collectionWorks } = await supabase
     .from('collection_works')
@@ -29,7 +30,7 @@ async function getCollection(id: string) {
     .limit(50)
 
   const workIds = ((collectionWorks ?? []) as { work_id: string }[]).map(cw => cw.work_id)
-  if (workIds.length === 0) return { collection: collection as Collection, works: [], creator: null }
+  if (workIds.length === 0) return { collection, works: [], creator: null }
 
   const { data: works } = await supabase
     .from('works')
@@ -43,7 +44,7 @@ async function getCollection(id: string) {
   }
   const orderedWorks = workIds.map(id => workMap.get(id)).filter(Boolean) as Work[]
 
-  return { collection: collection as Collection, works: orderedWorks, creator: null }
+  return { collection, works: orderedWorks, creator: null }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

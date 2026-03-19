@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { FilmPlayer } from '@/components/players/film-player'
+import { MusicPlayer } from '@/components/players/music-player'
 import { WritingReader } from '@/components/players/writing-reader'
 import { Badge } from '@/components/ui/badge'
 import { WorkCard } from '@/components/cards/work-card'
@@ -112,15 +113,7 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
             {/* Player */}
             {isVideo && <FilmPlayer work={work} />}
 
-            {isAudio && (
-              <div className="w-full aspect-square max-w-sm mx-auto bg-gradient-to-br from-gold/20 to-terra/20 rounded-2xl flex items-center justify-center mb-6 shadow-gold">
-                {work.cover_art_url ? (
-                  <Image src={work.cover_art_url} alt={work.title} width={400} height={400} className="rounded-2xl object-cover" />
-                ) : (
-                  <span className="text-8xl font-syne font-bold text-gold/20">{work.title[0]}</span>
-                )}
-              </div>
-            )}
+            {isAudio && <MusicPlayer work={work} />}
 
             {isText && work.written_content && (
               <WritingReader work={work} />

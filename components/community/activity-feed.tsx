@@ -117,7 +117,7 @@ export function ActivityFeed() {
 }
 
 function ActivityCard({ item }: { item: ActivityItem }) {
-  const meta = item.object_category ? CATEGORY_META[item.object_category] : null
+  const meta = item.object_category ? CATEGORY_META[item.object_category as keyof typeof CATEGORY_META] ?? null : null
   const href = item.object_type === 'work' && item.object_id
     ? `/work/${item.object_id}`
     : item.object_type === 'collab' && item.object_id
