@@ -69,6 +69,11 @@ export interface Creator {
   is_featured: boolean
   is_rising: boolean
   created_at: string
+  // Added in migration 007
+  creative_dna: string | null
+  creative_dna_updated_at: string | null
+  payfast_subscription_token: string | null
+  subscription_active_until: string | null
 }
 
 export interface Work {

@@ -8,6 +8,12 @@ import { Button } from '@/components/ui/button'
 import { WorkCardSkeleton, CreatorCardSkeleton } from '@/components/ui/shimmer'
 import type { Work, Creator } from '@/types'
 
+type TasteProfile = {
+  preferred_categories: string[]
+  preferred_genres: string[]
+  preferred_languages: string[]
+}
+
 // Seed works for MVP (carry from Phase 1)
 const SEED_WORKS: Partial<Work>[] = [
   { id: '1', title: 'The Weight of Ubuntu', category: 'film', view_count: 12400, heart_count: 890, is_trending: true },
@@ -93,13 +99,84 @@ async function getFeaturedCreators(): Promise<Creator[]> {
   }
 }
 
+async function getPersonalisedRows(userId: string): Promise<{ label: string; works: Work[] }[]> {
+  const supabase = await createClient()
+  const rows: { label: string; works: Work[] }[] = []
+
+  // Continue watching
+  const { data: history } = await supabase
+    .from('history')
+    .select('work_id, progress_pct, works:works(*, creator:creators(display_name, username, avatar_url))')
+    .eq('user_id', userId)
+    .eq('completed', false)
+    .gt('progress_pct', 0.05)
+    .order('last_watched', { ascending: false })
+    .limit(6)
+
+  if (history && history.length > 0) {
+    rows.push({ label: 'Continue Watching', works: history.map((h: { works: Work }) => h.works).filter(Boolean) })
+  }
+
+  // From creators you follow
+  const { data: follows } = await supabase
+    .from('follows')
+    .select('following_creator_id')
+    .eq('follower_id', userId)
+    .limit(20)
+
+  if (follows && follows.length > 0) {
+    const creatorIds = follows.map((f: { following_creator_id: string }) => f.following_creator_id)
+    const { data: followedWorks } = await supabase
+      .from('works')
+      .select('*, creator:creators(display_name, username, avatar_url)')
+      .eq('status', 'published')
+      .in('creator_id', creatorIds)
+      .order('published_at', { ascending: false })
+      .limit(8)
+
+    if (followedWorks && followedWorks.length > 0) {
+      rows.push({ label: 'New from Creators You Follow', works: followedWorks as Work[] })
+    }
+  }
+
+  // Based on taste profile
+  const { data: taste } = await supabase
+    .from('taste_profiles')
+    .select('preferred_categories, preferred_genres, preferred_languages')
+    .eq('user_id', userId)
+    .maybeSingle() as { data: TasteProfile | null }
+
+  if (taste?.preferred_categories?.length) {
+    const cat = taste.preferred_categories[0]
+    const { data: catWorks } = await supabase
+      .from('works')
+      .select('*, creator:creators(display_name, username, avatar_url)')
+      .eq('status', 'published')
+      .eq('category', cat)
+      .order('heart_count', { ascending: false })
+      .limit(8)
+
+    if (catWorks && catWorks.length > 0) {
+      const catLabel = cat.charAt(0).toUpperCase() + cat.slice(1).replace('_', ' ')
+      rows.push({ label: `More ${catLabel} You'll Love`, works: catWorks as Work[] })
+    }
+  }
+
+  return rows
+}
+
 export default async function HomePage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
   const [trending, awardWinners, poetry, featuredCreators] = await Promise.all([
     getTrendingWorks(),
     getAwardWinners(),
     getPoetryWorks(),
     getFeaturedCreators(),
   ])
+
+  const personalisedRows = user ? await getPersonalisedRows(user.id) : []
 
   return (
     <>
@@ -131,11 +208,14 @@ export default async function HomePage() {
 
           {/* CTAs */}
           <div className="flex flex-wrap gap-4 mb-16 animate-fade-up" style={{ animationDelay: '300ms' }}>
+            <Link href="/canvas">
+              <Button variant="gold" size="lg">Open Canvas</Button>
+            </Link>
             <Link href="/explore">
-              <Button variant="gold" size="lg">Start Watching</Button>
+              <Button variant="outline" size="lg">Browse All</Button>
             </Link>
             <Link href="/signup">
-              <Button variant="outline" size="lg">For Creators</Button>
+              <Button variant="ghost" size="lg">For Creators</Button>
             </Link>
           </div>
 
@@ -154,6 +234,15 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* PERSONALISED ROWS — logged-in users only */}
+      {personalisedRows.length > 0 && (
+        <div className="py-4">
+          {personalisedRows.map(row => (
+            <BrowseRow key={row.label} title={row.label} works={row.works} />
+          ))}
+        </div>
+      )}
 
       {/* BROWSE ROWS */}
       <div className="py-8">

@@ -11,6 +11,7 @@ const NAV = [
   { href: '/dashboard/analytics', label: 'Analytics', icon: '📈' },
   { href: '/dashboard/ai-assistant', label: 'AI Assistant', icon: '🤖' },
   { href: '/dashboard/earnings', label: 'Earnings', icon: '💰' },
+  { href: '/dashboard/payouts', label: 'Payouts', icon: '🏦' },
 ]
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {

@@ -6,12 +6,13 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/store/auth'
 import { Button } from '@/components/ui/button'
+import { NotificationsBell } from '@/components/layout/notifications-bell'
 import { cn } from '@/lib/utils'
 
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
   { href: '/explore', label: 'Browse' },
-  { href: '/category/film', label: 'African Originals' },
+  { href: '/canvas', label: 'Canvas' },
   { href: '/collabs', label: 'Collabs' },
 ]
 
@@ -100,6 +101,7 @@ export function Header() {
 
             {user ? (
               <>
+                <NotificationsBell />
                 <Link href="/dashboard">
                   <Button variant="outline" size="sm">Dashboard</Button>
                 </Link>

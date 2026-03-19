@@ -5,14 +5,31 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { WorkCard } from '@/components/cards/work-card'
 import { Badge } from '@/components/ui/badge'
+import { FollowButton } from '@/components/community/follow-button'
+import { CreativeDnaCard } from '@/components/ai/creative-dna-card'
+import { TipButton } from '@/components/payments/tip-button'
 import { formatCount } from '@/lib/utils'
 import { CATEGORY_META } from '@/types'
 import type { Creator, Work, ContentCategory } from '@/types'
 
-async function getCreator(username: string): Promise<Creator | null> {
+type CreatorWithBadges = Creator & { badges: { badge_type: string; awarded_at: string }[] }
+
+async function getCreator(username: string): Promise<CreatorWithBadges | null> {
   const supabase = await createClient()
-  const { data } = await supabase.from('creators').select('*').eq('username', username).single()
-  return data as Creator | null
+  const { data } = await supabase
+    .from('creators')
+    .select('*, badges:badges(badge_type, awarded_at)')
+    .eq('username', username)
+    .single()
+  return data as CreatorWithBadges | null
+}
+
+async function getViewerCreatorId(): Promise<string | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data } = await supabase.from('creators').select('id').eq('user_id', user.id).single()
+  return data?.id ?? null
 }
 
 async function getCreatorWorks(creatorId: string): Promise<Record<ContentCategory, Work[]>> {
@@ -59,11 +76,22 @@ export async function generateMetadata({ params }: { params: Promise<{ username:
 
 export default async function CreatorPage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params
-  const creator = await getCreator(username)
+  const [creator, viewerCreatorId] = await Promise.all([
+    getCreator(username),
+    getViewerCreatorId(),
+  ])
   if (!creator) notFound()
+
+  const isOwner = viewerCreatorId === creator.id
 
   const worksByCategory = await getCreatorWorks(creator.id)
   const categories = Object.keys(worksByCategory) as ContentCategory[]
+
+  // Parse Creative DNA if stored
+  let creativeDna = null
+  if (creator.creative_dna) {
+    try { creativeDna = JSON.parse(creator.creative_dna) } catch { /* noop */ }
+  }
 
   const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://afriflix.co.za'
   const jsonLd = {
@@ -120,16 +148,19 @@ export default async function CreatorPage({ params }: { params: Promise<{ userna
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3">
-            <button className="px-5 py-2 bg-gold/20 border border-gold/30 text-gold rounded-pill text-sm font-syne hover:bg-gold/30 transition-colors">
-              Follow
-            </button>
-            {creator.tips_enabled && (
-              <button className="px-5 py-2 bg-terra/20 border border-terra/30 text-terra-light rounded-pill text-sm font-syne hover:bg-terra/30 transition-colors">
-                Tip
-              </button>
-            )}
-          </div>
+          {!isOwner && (
+            <div className="flex gap-3">
+              <FollowButton creatorId={creator.id} />
+              {creator.tips_enabled && (
+                <TipButton creator={creator} />
+              )}
+            </div>
+          )}
+          {isOwner && (
+            <Link href="/dashboard/profile/setup" className="px-4 py-2 border border-white/10 rounded-pill text-sm text-ivory-mid hover:text-ivory hover:border-white/20 transition-colors font-syne">
+              Edit profile
+            </Link>
+          )}
         </div>
 
         {/* Bio */}
@@ -164,6 +195,35 @@ export default async function CreatorPage({ params }: { params: Promise<{ userna
           ))}
         </div>
 
+        {/* Promo reel */}
+        {creator.promo_reel_url && (
+          <div className="mb-8">
+            <video
+              src={creator.promo_reel_url}
+              className="w-full max-w-2xl rounded-2xl"
+              controls
+              poster={creator.banner_url ?? undefined}
+            />
+          </div>
+        )}
+
+        {/* Badges */}
+        {creator.badges?.length > 0 && (
+          <div className="mb-8">
+            <BadgeRack badges={creator.badges} />
+          </div>
+        )}
+
+        {/* Creative DNA */}
+        <div className="mb-8 max-w-xl">
+          <CreativeDnaCard
+            dna={creativeDna}
+            creatorId={creator.id}
+            isOwner={isOwner}
+            worksCount={creator.works_count}
+          />
+        </div>
+
         {/* Works by category */}
         {categories.length === 0 ? (
           <div className="text-center py-16">
@@ -191,3 +251,47 @@ export default async function CreatorPage({ params }: { params: Promise<{ userna
     </>
   )
 }
+
+const BADGE_META: Record<string, { label: string; icon: string; color: string }> = {
+  founding_creator:  { label: 'Founding Creator', icon: '🌍', color: 'border-gold/40 text-gold bg-gold/10' },
+  first_work:        { label: 'First Work', icon: '✨', color: 'border-white/10 text-ivory-mid bg-white/5' },
+  hearts_100:        { label: '100 Hearts', icon: '❤️', color: 'border-terra/30 text-terra-light bg-terra/10' },
+  hearts_1000:       { label: '1K Hearts', icon: '❤️‍🔥', color: 'border-terra/40 text-terra-light bg-terra/15' },
+  hearts_10000:      { label: '10K Hearts', icon: '💝', color: 'border-terra/50 text-terra-light bg-terra/20' },
+  followers_100:     { label: '100 Followers', icon: '👥', color: 'border-sky-500/30 text-sky-400 bg-sky-500/10' },
+  followers_1000:    { label: '1K Followers', icon: '🌟', color: 'border-sky-500/40 text-sky-400 bg-sky-500/15' },
+  followers_10000:   { label: '10K Followers', icon: '🚀', color: 'border-sky-500/50 text-sky-400 bg-sky-500/20' },
+  views_1000:        { label: '1K Views', icon: '👁️', color: 'border-white/10 text-ivory-mid bg-white/5' },
+  views_10000:       { label: '10K Views', icon: '🔥', color: 'border-amber-500/30 text-amber-400 bg-amber-500/10' },
+  views_100000:      { label: '100K Views', icon: '💫', color: 'border-amber-500/50 text-amber-400 bg-amber-500/20' },
+  works_10:          { label: '10 Works', icon: '🎬', color: 'border-purple-500/30 text-purple-400 bg-purple-500/10' },
+  works_50:          { label: '50 Works', icon: '🏛️', color: 'border-purple-500/50 text-purple-400 bg-purple-500/20' },
+  verified_african:  { label: 'African Verified', icon: '✓', color: 'border-gold/50 text-gold bg-gold/15' },
+  tipjar_unlocked:   { label: 'Tip Jar Open', icon: '💰', color: 'border-green-500/30 text-green-400 bg-green-500/10' },
+  collab_completed:  { label: 'Collaborator', icon: '🤝', color: 'border-white/10 text-ivory-mid bg-white/5' },
+}
+
+function BadgeRack({ badges }: { badges: { badge_type: string }[] }) {
+  return (
+    <div>
+      <p className="text-xs font-mono text-ivory-dim uppercase tracking-wider mb-3">Milestones</p>
+      <div className="flex flex-wrap gap-2">
+        {badges.map(b => {
+          const meta = BADGE_META[b.badge_type]
+          if (!meta) return null
+          return (
+            <div
+              key={b.badge_type}
+              title={meta.label}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-syne font-medium ${meta.color}`}
+            >
+              <span>{meta.icon}</span>
+              <span>{meta.label}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+

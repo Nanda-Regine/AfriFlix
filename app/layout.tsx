@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { Providers } from '@/components/layout/providers'
 import { ChatAssistant } from '@/components/ai/chat-assistant'
+import { AfriBrain } from '@/components/ai/afribrain'
 
 export const metadata: Metadata = {
   title: { default: 'AfriFlix — African Stories. Global Stage.', template: '%s | AfriFlix' },
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </main>
           <Footer />
           <ChatAssistant />
+          <AfriBrain />
         </Providers>
       </body>
     </html>
