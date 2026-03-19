@@ -55,8 +55,8 @@ export default async function LiveStreamPage({ params }: { params: Promise<{ id:
     // Keep DB status as fallback
   }
 
-  const isLive = cfStatus === 'live' || cfStatus === 'connected'
-  const playbackUrl = `https://customer-${process.env.CLOUDFLARE_ACCOUNT_ID}.cloudflarestream.com/${stream.cloudflare_live_uid}/manifest/video.m3u8`
+  const isLive   = cfStatus === 'live' || cfStatus === 'connected'
+  const cfAccount = process.env.CLOUDFLARE_ACCOUNT_ID ?? ''
 
   return (
     <div className="min-h-screen pt-20">
@@ -65,9 +65,9 @@ export default async function LiveStreamPage({ params }: { params: Promise<{ id:
           {/* Player */}
           <div>
             <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden relative">
-              {isLive ? (
+              {isLive && cfAccount ? (
                 <iframe
-                  src={`https://customer-${process.env.CLOUDFLARE_ACCOUNT_ID}.cloudflarestream.com/${stream.cloudflare_live_uid}/iframe?autoplay=true&muted=true`}
+                  src={`https://customer-${cfAccount}.cloudflarestream.com/${stream.cloudflare_live_uid}/iframe?autoplay=true&muted=true`}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                   className="w-full h-full"

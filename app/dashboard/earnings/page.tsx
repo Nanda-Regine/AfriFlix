@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/badge'
-import { UpgradeButton } from '@/components/payments/upgrade-button'
+import { PayfastPlanButton } from '@/components/payments/payfast-plan-button'
+import { CancelSubscriptionButton } from '@/components/payments/cancel-subscription-button'
 import { cn, formatCurrency, timeAgo } from '@/lib/utils'
 import type { Tip } from '@/types'
 
@@ -131,14 +132,14 @@ export default async function EarningsPage() {
             {plan.current ? (
               <div className="flex flex-col gap-2">
                 <Badge variant="dark" className="self-center">Current Plan</Badge>
-                {creator.stripe_account_id && (
-                  <UpgradeButton variant="portal" label="Manage Billing" />
+                {(creator as { payfast_subscription_token?: string }).payfast_subscription_token && (
+                  <CancelSubscriptionButton />
                 )}
               </div>
             ) : plan.name === 'Free' ? (
-              <Badge variant="dark" className="self-center text-xs">Downgrade via billing portal</Badge>
+              <Badge variant="dark" className="self-center text-xs">Cancel subscription to downgrade</Badge>
             ) : (
-              <UpgradeButton
+              <PayfastPlanButton
                 plan={plan.name === 'Creator Pro' ? 'creator_pro' : 'label'}
                 variant={plan.highlight ? 'gold' : 'outline'}
                 label={`Upgrade — ${plan.price}`}

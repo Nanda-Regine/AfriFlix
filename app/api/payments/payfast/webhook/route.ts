@@ -50,16 +50,92 @@ export async function POST(req: Request) {
       return new NextResponse('Invalid signature', { status: 400 })
     }
 
-    const { payment_status, custom_str1: tipId, custom_str2: creatorId, amount_gross } = params
-
-    if (!tipId) return new NextResponse('Missing tip ID', { status: 400 })
+    const {
+      payment_status,
+      custom_str1,   // tipId OR creatorId depending on payment type
+      custom_str2,   // creatorId for tips OR plan key for subscriptions
+      custom_str3,   // subscription reference
+      amount_gross,
+      token,                    // PayFast subscription token (present for recurring)
+      subscription_type,        // '1' for subscription IPN
+      billing_date,
+    } = params
 
     const supabase = await createClient()
+
+    // ── Subscription IPN ────────────────────────────────────────────────────
+    if (subscription_type === '1') {
+      const creatorId = custom_str1
+      const plan      = custom_str2 as string
+
+      if (!creatorId || !plan) return new NextResponse('Missing subscription data', { status: 400 })
+
+      const validPlans = ['creator_pro', 'label']
+      if (!validPlans.includes(plan)) return new NextResponse('Invalid plan', { status: 400 })
+
+      if (payment_status === 'COMPLETE') {
+        // First charge or renewal — activate plan + store token
+        const nextBilling = billing_date
+          ? new Date(new Date(billing_date).setMonth(new Date(billing_date).getMonth() + 1)).toISOString().split('T')[0]
+          : null
+
+        await supabase
+          .from('creators')
+          .update({
+            plan,
+            payfast_subscription_token: token ?? null,
+            subscription_billing_date: billing_date ?? null,
+            subscription_active_until: nextBilling
+              ? new Date(nextBilling).toISOString()
+              : null,
+          })
+          .eq('id', creatorId)
+
+        // Log subscription event
+        await supabase.from('subscriptions').upsert({
+          creator_id: creatorId,
+          plan,
+          provider: 'payfast',
+          payment_reference: custom_str3 ?? null,
+          token: token ?? null,
+          amount: parseFloat(amount_gross ?? '0'),
+          currency: 'ZAR',
+          status: 'active',
+          billing_date: billing_date ?? null,
+          next_billing_date: nextBilling,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'creator_id' })
+
+      } else if (payment_status === 'FAILED' || payment_status === 'CANCELLED') {
+        // Subscription lapsed — revert to free
+        await supabase
+          .from('creators')
+          .update({
+            plan: 'free',
+            payfast_subscription_token: null,
+            subscription_active_until: null,
+          })
+          .eq('id', creatorId)
+
+        await supabase
+          .from('subscriptions')
+          .update({ status: payment_status === 'CANCELLED' ? 'cancelled' : 'failed', updated_at: new Date().toISOString() })
+          .eq('creator_id', creatorId)
+          .eq('status', 'active')
+      }
+
+      return new NextResponse('OK', { status: 200 })
+    }
+
+    // ── One-time tip IPN ─────────────────────────────────────────────────────
+    const tipId     = custom_str1
+    const creatorId = custom_str2
+
+    if (!tipId) return new NextResponse('Missing tip ID', { status: 400 })
 
     if (payment_status === 'COMPLETE') {
       await supabase.from('tips').update({ status: 'completed' }).eq('id', tipId)
 
-      // Increment creator stats
       if (creatorId) {
         await supabase.rpc('increment_creator_tips', {
           p_creator_id: creatorId,

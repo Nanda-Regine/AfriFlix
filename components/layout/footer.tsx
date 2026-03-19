@@ -13,9 +13,16 @@ const LINKS = {
     { label: 'Partnerships', href: '/partners' },
     { label: 'Collab Board', href: '/collabs' },
   ],
+  Legal: [
+    { label: 'Terms of Service', href: '/legal/terms' },
+    { label: 'Privacy Policy', href: '/legal/privacy' },
+    { label: 'Creator Agreement', href: '/legal/creator-agreement' },
+    { label: 'Content Policy', href: '/legal/content-policy' },
+  ],
   Contact: [
     { label: 'hello@mirembemuse.co.za', href: 'mailto:hello@mirembemuse.co.za' },
-    { label: 'creativelynanda.co.za', href: 'https://creativelynanda.co.za' },
+    { label: 'creators@afriflix.co.za', href: 'mailto:creators@afriflix.co.za' },
+    { label: 'legal@afriflix.co.za', href: 'mailto:legal@afriflix.co.za' },
   ],
 }
 
@@ -23,9 +30,9 @@ export function Footer() {
   return (
     <footer className="bg-black-mid border-t border-white/5 mt-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-12">
           {/* Brand */}
-          <div className="md:col-span-1">
+          <div className="col-span-2 md:col-span-1">
             <div className="font-syne font-bold text-2xl mb-3">
               <span className="text-ivory">Afri</span>
               <span className="text-gold">Flix</span>
