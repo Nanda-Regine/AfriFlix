@@ -5,7 +5,7 @@ import { WorkCard } from '@/components/cards/work-card'
 import { CreatorCard } from '@/components/cards/creator-card'
 import { WorkCardSkeleton } from '@/components/ui/shimmer'
 import { Badge } from '@/components/ui/badge'
-import { CATEGORY_META, MOOD_CONFIG } from '@/types'
+import { CATEGORY_META, MOOD_CONFIG, AFRICAN_COUNTRIES } from '@/types'
 import type { Work, Creator, ContentCategory } from '@/types'
 
 interface SearchParams { category?: string; mood?: string; country?: string; genre?: string }
@@ -144,6 +144,27 @@ export default async function ExplorePage({
             </div>
           )}
         </div>
+
+        {/* Browse by country — only on unfiltered view */}
+        {!hasFilters && (
+          <div className="mt-16">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-syne font-semibold text-ivory">Browse by Country</h2>
+              <p className="text-xs text-ivory-dim font-mono">54 African Nations</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {AFRICAN_COUNTRIES.map(country => (
+                <Link
+                  key={country}
+                  href={`/country/${encodeURIComponent(country.toLowerCase().replace(/\s+/g, '-'))}`}
+                  className="px-3 py-1.5 rounded-lg border border-white/5 bg-black-card text-xs font-syne text-ivory-dim hover:text-ivory hover:border-gold/20 hover:bg-black-hover transition-all"
+                >
+                  {country}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
