@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { href: '/', label: 'Home' },
   { href: '/explore', label: 'Browse' },
   { href: '/canvas', label: 'Canvas' },
+  { href: '/live', label: '● Live', className: 'text-terra-light' },
   { href: '/collabs', label: 'Collabs' },
 ]
 
@@ -68,7 +69,7 @@ export function Header() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="px-4 py-2 text-sm font-syne text-ivory-mid hover:text-ivory transition-colors rounded-lg hover:bg-white/5"
+                className={cn('px-4 py-2 text-sm font-syne hover:text-ivory transition-colors rounded-lg hover:bg-white/5', link.className ?? 'text-ivory-mid')}
               >
                 {link.label}
               </Link>
