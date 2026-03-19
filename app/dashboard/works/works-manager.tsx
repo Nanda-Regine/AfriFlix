@@ -152,6 +152,12 @@ export function WorksManager({ works: initialWorks }: WorksManagerProps) {
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Link
+                          href={`/dashboard/works/${work.id}`}
+                          className="text-xs text-gold hover:text-gold-light px-2 py-1 rounded hover:bg-gold/5 transition-colors"
+                        >
+                          Edit
+                        </Link>
+                        <Link
                           href={`/work/${work.id}`}
                           className="text-xs text-ivory-dim hover:text-ivory px-2 py-1 rounded hover:bg-black-hover transition-colors"
                         >
