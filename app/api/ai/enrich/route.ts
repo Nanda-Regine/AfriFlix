@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { anthropic, CLAUDE_MODEL, safeParseJSON, checkRateLimit, cachedSystem } from '@/lib/claude'
+import { anthropic, CLAUDE_HAIKU, safeParseJSON, checkRateLimit, cachedSystem } from '@/lib/claude'
 import { createClient } from '@/lib/supabase/server'
 import type { AIEnrichment } from '@/types'
 
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     }
 
     const response = await anthropic.messages.create({
-      model: CLAUDE_MODEL,
+      model: CLAUDE_HAIKU,
       max_tokens: 500,
       system: cachedSystem(ENRICH_SYSTEM),
       messages: [{

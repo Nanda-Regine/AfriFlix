@@ -15,10 +15,14 @@ const NAV = [
   { href: '/dashboard/payouts', label: 'Payouts', icon: '🏦' },
 ]
 
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase())
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login?next=/dashboard')
+
+  const isAdmin = ADMIN_EMAILS.includes(user.email?.toLowerCase() ?? '')
 
   return (
     <div className="min-h-screen pt-16 flex">
@@ -37,6 +41,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <span>{item.label}</span>
           </Link>
         ))}
+        {isAdmin && (
+          <Link
+            href="/dashboard/admin"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-syne text-gold/70 hover:text-gold hover:bg-black-hover transition-colors mt-2 border-t border-white/5 pt-4"
+          >
+            <span>⚡</span>
+            <span>Admin</span>
+          </Link>
+        )}
       </aside>
 
       {/* Mobile nav */}

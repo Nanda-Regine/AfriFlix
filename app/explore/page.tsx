@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
+import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { WorkCard } from '@/components/cards/work-card'
 import { CreatorCard } from '@/components/cards/creator-card'
@@ -28,7 +29,7 @@ async function getWorks(filters: SearchParams): Promise<Work[]> {
   return (data as Work[]) ?? []
 }
 
-async function getRisingCreators(): Promise<Creator[]> {
+const getRisingCreators = unstable_cache(async (): Promise<Creator[]> => {
   const supabase = await createClient()
   const { data } = await supabase
     .from('creators')
@@ -37,7 +38,7 @@ async function getRisingCreators(): Promise<Creator[]> {
     .order('follower_count', { ascending: false })
     .limit(6)
   return (data as Creator[]) ?? []
-}
+}, ['rising-creators'], { revalidate: 300 })
 
 export default async function ExplorePage({
   searchParams,

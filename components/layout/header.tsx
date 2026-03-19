@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
   { href: '/explore', label: 'Browse' },
+  { href: '/originals', label: 'Originals', className: 'text-gold' },
   { href: '/canvas', label: 'Canvas' },
   { href: '/live', label: '● Live', className: 'text-terra-light' },
   { href: '/collabs', label: 'Collabs' },
